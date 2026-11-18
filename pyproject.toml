@@ -18,6 +18,8 @@ dependencies = [
     "accelerate>=0.27",
     "numpy>=1.24",
     "pillow>=10",
+    "huggingface_hub>=0.24",
+    "safetensors>=0.4",
 ]
 
 [project.urls]

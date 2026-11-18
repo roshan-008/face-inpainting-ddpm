@@ -10,10 +10,24 @@ This project takes Google's pretrained CelebA-HQ diffusion model, [`google/ddpm-
 - **Input:** the model sees the photo with its hole, plus a mask marking the hole.
 - **Output:** it generates the missing pixels so they fit the rest of the face.
 
-Training and evaluation run on [Modal](https://modal.com) GPUs.
+Training and evaluation run on [Modal](https://modal.com) GPUs. **The trained weights are published on Hugging Face: [roshan-08/face-inpainting-ddpm](https://huggingface.co/roshan-08/face-inpainting-ddpm)**, so you can inpaint your own photos without training anything.
 
 ![Inpainting results on held-out faces, centre-box mask](assets/result_box.jpg)
 *Rows: input with the hole in white · inpainted · original. 8 CelebA-HQ validation faces the model never trained on, 96×96 centre hole.*
+
+### Try it in three commands
+
+```bash
+git clone https://github.com/roshan-008/face-inpainting-ddpm.git && cd face-inpainting-ddpm
+pip install -e .
+python scripts/make_mask.py --image face.jpg --out mask.png --kind box --size 0.35
+python scripts/inpaint.py --image face.jpg --mask mask.png --out result.png
+```
+
+The weights (228 MB) download automatically. Sampling runs all 1,000 denoising steps: about a minute on a CUDA GPU, tens of minutes on CPU.
+
+![One face, four independent fills of the same hole](assets/demo_four_fills.jpg)
+*Left to right: input with the hole in white · four independent fills (different seeds) · original. Output of `scripts/inpaint.py` with the published weights.*
 
 ---
 
@@ -161,7 +175,7 @@ After every step the known region is overwritten with the real photo, noised to 
 ### Requirements
 
 - Python 3.10+
-- A [Modal](https://modal.com) account. Training needs a GPU; everything here runs on Modal.
+- To only inpaint photos: nothing else (a CUDA GPU is recommended). To train or re-evaluate: a [Modal](https://modal.com) account; those steps run on Modal.
 
 ```bash
 git clone https://github.com/roshan-008/face-inpainting-ddpm.git && cd face-inpainting-ddpm
@@ -235,16 +249,16 @@ The output is one strip: masked input | 4 independent fills | original.
 import torch
 from diffusers import DDPMScheduler
 from face_inpainting.data import load_photo_and_mask
-from face_inpainting.model import load_checkpoint
+from face_inpainting.model import load_pretrained   # or load_checkpoint(path) for a training checkpoint
 from face_inpainting.sampling import inpaint
 
-unet, _ = load_checkpoint("step_006000.pt", device="cuda")
+unet = load_pretrained("roshan-08/face-inpainting-ddpm", device="cuda")   # downloads from the Hub
 scheduler = DDPMScheduler.from_pretrained("google/ddpm-ema-celebahq-256")
 photo, mask = load_photo_and_mask("face.jpg", "mask.png")
 result = inpaint(unet, scheduler, photo.cuda(), mask.cuda(), torch.Generator("cuda").manual_seed(0))
 ```
 
-The checkpoint itself is not in this repository (1.8 GB). It is written to the Modal Volume by `train`.
+The training checkpoint (1.8 GB, with optimiser state) is not in this repository; `train` writes it to the Modal Volume. The released weights are a 228 MB fp16 export of the trained model: see [`scripts/export_weights.py`](scripts/export_weights.py) to make one from your own run.
 
 ---
 
@@ -271,9 +285,9 @@ Re-running `evaluate` on the same checkpoint reproduces these numbers to within 
 pytest
 ```
 
-18 CPU tests run in a few seconds, using a tiny UNet in place of the real model. They check:
+19 CPU tests run in a few seconds, using a tiny UNet in place of the real model. They check:
 - **Masks:** the evaluation masks have the right shapes and sizes, and the training masks are reproducible for a given seed.
-- **Model:** the widened 7-channel model gives exactly the pretrained model's output before training, and checkpoints load back unchanged.
+- **Model:** the widened 7-channel model gives exactly the pretrained model's output before training, and checkpoints and the released-weights format load back unchanged.
 - **Sampling:** known pixels come out exact, and sampling is deterministic for a given seed.
 - **Metrics:** hole PSNR and L1 ignore known pixels.
 - **Data:** photos and masks are cropped, resized, scaled and validated correctly.
@@ -292,6 +306,9 @@ face-inpainting-ddpm/
 │   ├── data.py                  CelebA-HQ folder dataset; photo + mask loading
 │   └── metrics.py               hole PSNR and hole L1
 ├── scripts/make_mask.py         make a mask for your own photo (Pillow only)
+├── scripts/inpaint.py           inpaint a photo locally with the released weights
+├── scripts/export_weights.py    turn a training checkpoint into the release weights
+├── MODEL_CARD.md                model card published on Hugging Face
 ├── tests/                       CPU unit tests (pytest)
 ├── results/
 │   ├── step_006000/             final model: grids + metrics.json
@@ -343,4 +360,4 @@ At Modal list prices (L4 $0.80/h, L40S $1.95/h):
 
 ## 12. License and citation
 
-Code: [MIT](LICENSE). The pretrained weights and the CelebA-HQ data have their own terms (see section 11). To cite this repository, use [`CITATION.cff`](CITATION.cff) (GitHub's "Cite this repository" button).
+Code: [MIT](LICENSE). The published weights are Apache-2.0 (inherited from the base model) and, because they were fine-tuned on CelebA-HQ, are intended for non-commercial research use; see section 11 and the [model card](MODEL_CARD.md). To cite this repository, use [`CITATION.cff`](CITATION.cff) (GitHub's "Cite this repository" button).

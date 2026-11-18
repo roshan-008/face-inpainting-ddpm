@@ -1,6 +1,10 @@
 import torch
 
-from face_inpainting.model import IN_CHANNELS, load_checkpoint, widen_input
+import json
+
+from safetensors.torch import save_file
+
+from face_inpainting.model import IN_CHANNELS, load_checkpoint, load_pretrained, widen_input
 
 
 def test_widened_model_matches_pretrained_before_training(tiny_unet):
@@ -29,5 +33,15 @@ def test_checkpoint_round_trip(tiny_unet, tmp_path):
     torch.save({"unet_config": config, "model": wide.state_dict(), "ema": wide.state_dict(), "step": 42}, path)
     loaded, step = load_checkpoint(path, "model", device="cpu", dtype=torch.float32)
     assert step == 42
+    for name, tensor in wide.state_dict().items():
+        torch.testing.assert_close(loaded.state_dict()[name], tensor)
+
+
+def test_released_weights_folder_round_trip(tiny_unet, tmp_path):
+    """A folder in the release layout (config json + safetensors) loads back unchanged."""
+    wide, config = widen_input(tiny_unet)
+    save_file({k: v.contiguous() for k, v in wide.state_dict().items()}, tmp_path / "model.safetensors")
+    (tmp_path / "unet_config.json").write_text(json.dumps(config, default=list))
+    loaded = load_pretrained(tmp_path, device="cpu", dtype=torch.float32)
     for name, tensor in wide.state_dict().items():
         torch.testing.assert_close(loaded.state_dict()[name], tensor)

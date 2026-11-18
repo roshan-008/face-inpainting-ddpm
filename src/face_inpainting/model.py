@@ -12,12 +12,16 @@ model computes.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import torch
 from diffusers import UNet2DModel
 
 IN_CHANNELS = 7
+HUB_REPO = "roshan-08/face-inpainting-ddpm"
+WEIGHTS_FILE = "model.safetensors"
+CONFIG_FILE = "unet_config.json"
 
 
 def widen_input(base: UNet2DModel) -> tuple[UNet2DModel, dict]:
@@ -59,3 +63,27 @@ def load_checkpoint(
     unet = UNet2DModel(**ckpt["unet_config"])
     unet.load_state_dict(ckpt[weights])
     return unet.to(device=device, dtype=dtype).eval(), int(ckpt["step"])
+
+
+def load_pretrained(
+    repo_id: str = HUB_REPO,
+    device: torch.device | str = "cuda",
+    dtype: torch.dtype = torch.float16,
+) -> UNet2DModel:
+    """Download the released fine-tuned weights from the Hugging Face Hub.
+
+    ``repo_id`` may also be a local folder holding ``unet_config.json`` and
+    ``model.safetensors`` (what ``scripts/export_weights.py`` writes).
+    """
+    from huggingface_hub import hf_hub_download
+    from safetensors.torch import load_file
+
+    folder = Path(repo_id)
+    if folder.is_dir():
+        config_path, weights_path = folder / CONFIG_FILE, folder / WEIGHTS_FILE
+    else:
+        config_path = Path(hf_hub_download(repo_id, CONFIG_FILE))
+        weights_path = Path(hf_hub_download(repo_id, WEIGHTS_FILE))
+    unet = UNet2DModel(**json.loads(config_path.read_text()))
+    unet.load_state_dict(load_file(weights_path))
+    return unet.to(device=device, dtype=dtype).eval()
