@@ -1,0 +1,27 @@
+{
+  "checkpoint": "step_006000.pt",
+  "finetune_steps": 6000,
+  "weights": "model",
+  "seed": 0,
+  "n_faces": 8,
+  "sets": {
+    "val_box": {
+      "images": 8,
+      "hole_fraction": 0.140625,
+      "hole_psnr_db": 19.100955963134766,
+      "hole_l1": 0.07423142343759537
+    },
+    "val_irregular": {
+      "images": 8,
+      "hole_fraction": 0.16936874389648438,
+      "hole_psnr_db": 18.06466293334961,
+      "hole_l1": 0.08179335296154022
+    },
+    "val_half": {
+      "images": 8,
+      "hole_fraction": 0.5,
+      "hole_psnr_db": 11.59548282623291,
+      "hole_l1": 0.218929722905159
+    }
+  }
+}

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "face-inpainting"
+version = "0.1.0"
+description = "Face inpainting with a mask-aware fine-tune of Google's CelebA-HQ DDPM"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Roshan Kumar Singh" }]
+keywords = ["diffusion", "ddpm", "inpainting", "face", "celeba-hq", "pytorch"]
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.2",
+    "torchvision>=0.17",
+    "diffusers>=0.30",
+    "accelerate>=0.27",
+    "numpy>=1.24",
+    "pillow>=10",
+]
+
+[project.urls]
+Homepage = "https://github.com/roshan-008/face-inpainting-ddpm"
+
+[project.optional-dependencies]
+modal = ["modal>=1.5,<2"]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

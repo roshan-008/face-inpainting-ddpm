@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite it as below."
+title: "Face Inpainting with a Fine-Tuned DDPM"
+type: software
+authors:
+  - family-names: Singh
+    given-names: Roshan Kumar
+license: MIT
+repository-code: "https://github.com/roshan-008/face-inpainting-ddpm"
